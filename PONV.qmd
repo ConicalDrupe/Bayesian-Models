@@ -1,0 +1,76 @@
+
+# Overview
+PONV = post-operative nausea and vomiting
+From a meta analysis of several studies we have rates: \
+Nausea 37% \
+Vomiting 20% \
+for patients undergoing anesthesia.
+
+Main and well understood risk factors are:
+- Gender (0-male, 1-female)
+- history of motion sickness/PONV (True/False, Sinclair Score respectively)
+- Smoking status (0/1)
+- Duration of anesthesia
+
+# Q1
+Use normal noninformative priors on the beta coefficents and gamma prior on the precision parameter (recipricol of variance)
+
+## Get the Data
+```{python}
+import os
+import pandas as pd
+
+data_dir = os.path.join(os.getcwd(),'data','PONV.csv')
+df = pd.read_csv(data_dir)
+
+print(df.head())
+print(df.columns)
+
+data = df[['Diagnosis','Gender','Anaesthesiaduration','Smoking','PONVhist']]
+data = data.rename(columns={'Gender':'g','Anaesthesiaduration':'ad','Smoking':'s','PONVhist':'h'})
+print(data.columns)
+print(data.shape)
+```
+
+
+## EDA
+See: https://bambinos.github.io/bambi/notebooks/ESCS_multiple_regression.html
+```{python}
+import matplotlib.pyplot as plt
+import arviz as az
+
+#plt.figure()
+az.plot_pair(data.to_dict("list"),marginals=True,textsize=24)
+#plt.show()
+```
+
+
+## Heiarchy Model using Non-Informative Priors
+- Normal for Betas
+- Gamma for precision (recipricol of variance)
+
+To Set priors using Bambi, See: https://bambinos.github.io/bambi/api/Model.html#bambi.Model
+```{python}
+import bambi as bmb
+import numpy as np
+import xarray as xr
+
+random_seed = 1337
+rng = np.random.default_rng(random_seed)
+
+precision_prior = bmb.Prior("Gamma",alpha=,beta=) # Setting Precision Prior
+beta_priors = bmb.Prior("Normal",mu=0,tau=precision_prior) # Setting Priors of Regression Coefficients
+priors = {['g','ad','s','h']:beta_priors}
+model = bmb.Model(formula='Diagnosis ~ g + ad + s + h',
+                  data=data,
+                  priors=priors)
+
+model.plot_priors() # Check Priors
+model # Check Model Information
+```
+
+
+## Fitting Our Bayesian Regression Model
+```{python}
+fitted = model.fit(tune=2000,draws=200,init="adapt_diag")
+```
