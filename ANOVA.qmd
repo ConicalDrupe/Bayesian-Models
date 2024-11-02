@@ -1,0 +1,62 @@
+Source: https://areding.github.io/6420-pymc/unit7/Unit7-coagulation.html
+
+# Colors and Insects Trapped Data
+```{python}
+import pandas as pd
+import numpy as np
+import pymc as pm
+
+# 1 - Lemon Yellow
+# 2 - White
+# 3 - Green
+# 4 - Blue
+# List is number as Insects Trapped on each Colored Board
+data = {1:[45,59,48,46,38,47],
+        2:[21,12,14,17,13,17],
+        3:[16,11,20,21,14,7],
+        4:[37,32,15,25,39,41]
+        }
+df = pd.DataFrame(data=data)
+print(df)
+```
+
+
+```{python}
+
+with pm.Model() as m:
+  mu0 = pm.Normal("mu0", mu=0, tau=0.0001) # Grand Mu
+  tau = pm.Gamma("tau", 0.001,0.001)
+
+  alpha4 = pm.Normal("alpha4",mu=0,tau=0.0001)
+  alpha3 = pm.Normal("alpha3",mu=0,tau=0.0001)
+  alpha2 = pm.Normal("alpha2",mu=0,tau=0.0001)
+  # Sum to zero constraint
+  alpha1 = pm.Deterministic("alpha1",-(alpha2 + alpha3 + alpha4))
+
+  mu_1 = mu0 + alpha1
+  mu_2 = mu0 + alpha2
+  mu_3 = mu0 + alpha3
+  mu_4 = mu0 + alpha4
+
+  pm.Normal("lik1", mu=mu_1, tau=tau, observed=data[["1"]])
+  pm.Normal("lik2", mu=mu_2, tau=tau, observed=data[["2"]])
+  pm.Normal("lik3", mu=mu_3, tau=tau, observed=data[["3"]])
+  pm.Normal("lik4", mu=mu_4, tau=tau, observed=data[["4"]])
+
+  onetwo = pm.Deterministic("α1-α2", alpha1 - alpha2)
+  onethree = pm.Deterministic("α1-α3", alpha1 - alpha3)
+  onefour = pm.Deterministic("α1-α4", alpha1 - alpha4)
+  twothree = pm.Deterministic("α2-α3", alpha2 - alpha3)
+  twofour = pm.Deterministic("α2-α4", alpha2 - alpha4)
+  threefour = pm.Deterministic("α3-α4", alpha3 - alpha4)
+
+  trace = pm.sample(5000)
+```
+
+
+```{python}
+print(az.summary(trace, var_names=["α"], filter_vars="like", kind="stats"))
+
+az.plot_forest(trace, var_names=["alpha1", "alpha2", "alpha3", "alpha4"], combined=True)
+
+```
