@@ -38,25 +38,35 @@ with pm.Model() as m:
   mu_3 = mu0 + alpha3
   mu_4 = mu0 + alpha4
 
-  pm.Normal("lik1", mu=mu_1, tau=tau, observed=data[["1"]])
-  pm.Normal("lik2", mu=mu_2, tau=tau, observed=data[["2"]])
-  pm.Normal("lik3", mu=mu_3, tau=tau, observed=data[["3"]])
-  pm.Normal("lik4", mu=mu_4, tau=tau, observed=data[["4"]])
+  pm.Normal("lik1", mu=mu_1, tau=tau, observed=df[[1]].to_numpy())
+  pm.Normal("lik2", mu=mu_2, tau=tau, observed=df[[2]].to_numpy())
+  pm.Normal("lik3", mu=mu_3, tau=tau, observed=df[[3]].to_numpy())
+  pm.Normal("lik4", mu=mu_4, tau=tau, observed=df[[4]].to_numpy())
 
-  onetwo = pm.Deterministic("α1-α2", alpha1 - alpha2)
-  onethree = pm.Deterministic("α1-α3", alpha1 - alpha3)
-  onefour = pm.Deterministic("α1-α4", alpha1 - alpha4)
-  twothree = pm.Deterministic("α2-α3", alpha2 - alpha3)
-  twofour = pm.Deterministic("α2-α4", alpha2 - alpha4)
-  threefour = pm.Deterministic("α3-α4", alpha3 - alpha4)
+  onetwo = pm.Deterministic("alpha1-alpha2", alpha1 - alpha2)
+  onethree = pm.Deterministic("alpha1-alpha3", alpha1 - alpha3)
+  onefour = pm.Deterministic("alpha1-alpha4", alpha1 - alpha4)
+  twothree = pm.Deterministic("alpha2-alpha3", alpha2 - alpha3)
+  twofour = pm.Deterministic("alpha2-alpha4", alpha2 - alpha4)
+  threefour = pm.Deterministic("alpha3-alpha4", alpha3 - alpha4)
 
   trace = pm.sample(5000)
 ```
 
 
 ```{python}
-print(az.summary(trace, var_names=["α"], filter_vars="like", kind="stats"))
+import arviz as az
+import matplotlib.pyplot as plt
 
+print(az.summary(trace, var_names=["alpha"], filter_vars="like", kind="stats"))
+
+plt.figure()
 az.plot_forest(trace, var_names=["alpha1", "alpha2", "alpha3", "alpha4"], combined=True)
-
+plt.show()
 ```
+
+$\alpha_2$ and $\alpha_4$ lie outside the 95% CS
+$\alpha_3$ and $\alpha_4$ lie outside the 95% CS
+White and Blue have different effects on number of insects attracted
+Green and Blue have different effects on number of insects attracted
+
