@@ -23,11 +23,14 @@ import pandas as pd
 data_dir = os.path.join(os.getcwd(),'data','PONV.csv')
 df = pd.read_csv(data_dir)
 
+pd.options.display.max_rows = None
+pd.options.display.max_columns= None
+
 print(df.head())
 print(df.columns)
 
-data = df[['Diagnosis','Gender','Anaesthesiaduration','Smoking','PONVhist']]
-data = data.rename(columns={'Gender':'g','Anaesthesiaduration':'ad','Smoking':'s','PONVhist':'h'})
+data = df[['SinclairScore','Gender','Anaesthesiaduration','Smoking','PONVhist']]
+data = data.rename(columns={'SinclairScore':'Sinclair','Gender':'g','Anaesthesiaduration':'ad','Smoking':'s','PONVhist':'h'})
 print(data.columns)
 print(data.shape)
 ```
@@ -39,38 +42,55 @@ See: https://bambinos.github.io/bambi/notebooks/ESCS_multiple_regression.html
 import matplotlib.pyplot as plt
 import arviz as az
 
-#plt.figure()
+plt.figure()
 az.plot_pair(data.to_dict("list"),marginals=True,textsize=24)
-#plt.show()
+plt.show()
 ```
 
 
 ## Heiarchy Model using Non-Informative Priors
+- Non-Informative meaning Priors have a large variance, so possible values are quite broad. Letting the data speak...
 - Normal for Betas
 - Gamma for precision (recipricol of variance)
 
-To Set priors using Bambi, See: https://bambinos.github.io/bambi/api/Model.html#bambi.Model
 ```{python}
-import bambi as bmb
-import numpy as np
-import xarray as xr
+import pymc as pm
+y = data['Sinclair']
+X = data.loc[:,data.columns != 'Sinclair']
+X['intercept'] = 1
 
-random_seed = 1337
-rng = np.random.default_rng(random_seed)
+shape = X.shape[1] #+ 1 # number of beta coefficients
 
-precision_prior = bmb.Prior("Gamma",alpha=,beta=) # Setting Precision Prior
-beta_priors = bmb.Prior("Normal",mu=0,tau=precision_prior) # Setting Priors of Regression Coefficients
-priors = {['g','ad','s','h']:beta_priors}
-model = bmb.Model(formula='Diagnosis ~ g + ad + s + h',
-                  data=data,
-                  priors=priors)
+with pm.Model() as model:
+    # Hyperprior on tau (precision of beta coefficients)
+    tau = pm.Gamma('tau', alpha=0.2, beta=0.2)  # a, b for Gamma prior are hyperparameters
+    # Hierarchical prior on beta coefficients
+    beta = pm.Normal('beta', mu=0, tau=tau, shape=shape)
 
-model.plot_priors() # Check Priors
-model # Check Model Information
+    # Linear model
+    mu = pm.math.dot(X, beta)
+
+    # Likelihood of the data
+    y_obs = pm.Normal('y_obs', mu=mu,tau=tau, observed=y)
+
+    # Inference
+    trace = pm.sample(2000, tune=1000)
+    ppc = pm.sample_posterior_predictive(trace)
+
+# Analyzing results
+print(X.columns)
+print(pm.summary(trace))
+
 ```
 
 
-## Fitting Our Bayesian Regression Model
+### Checking R-Score
 ```{python}
-fitted = model.fit(tune=2000,draws=200,init="adapt_diag")
+y_pred = ppc.posterior_predictive.stack(sample=("chain", "draw"))["y_obs"].values.T
+print(az.r2_score(y.to_numpy(), y_pred))
+
+plt.figure()
+az.plot_trace(trace, figsize=(10, 7));
+plt.show()
 ```
+
