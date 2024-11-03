@@ -58,11 +58,11 @@ with pm.Model() as m:
 import arviz as az
 import matplotlib.pyplot as plt
 
-print(az.summary(trace, var_names=["alpha"], filter_vars="like", kind="stats"))
+az.summary(trace, var_names=["alpha"], filter_vars="like", kind="stats")
 
-plt.figure()
-az.plot_forest(trace, var_names=["alpha1", "alpha2", "alpha3", "alpha4"], combined=True)
-plt.show()
+# plt.figure()
+# az.plot_forest(trace, var_names=["alpha1", "alpha2", "alpha3", "alpha4"], combined=True)
+# plt.show()
 ```
 
 $\alpha_2$ and $\alpha_4$ lie outside the 95% CS
