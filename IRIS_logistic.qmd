@@ -25,6 +25,17 @@ log_reg = sm.Logit(Y,X).fit()
 print(log_reg.summary())
 ```
 
+## Looking more in depth at complete sepreration
+```{python}
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+plt.figure()
+sns.pairplot(data=df,hue='Species')
+plt.show()
+```
+
 ## Frequestist Logistic Regressions
 - What do you observe?
 - Do you see any problems?
@@ -35,17 +46,18 @@ The data completely seperates the target variable. Meaning there is some rule th
 ```{python}
 import arviz as az
 import pymc as pm 
+import numpy as np
 
 
 with pm.Model() as model:
     # Beta priors
-    beta = pm.Normal('beta', mu=0, sigma=100, shape=X.shape[1])
+    beta = pm.Normal('beta', mu=0, sigma=np.sqrt(1000), shape=X.shape[1])
 
     # Logit Model
     p = pm.invlogit(pm.math.dot(X, beta))
 
     # Likelihood of the data
-    y_obs = pm.Binomial('y_obs',n=X.shape[0],p=p, observed=Y)
+    y_obs = pm.Bernoulli('y_obs',logit_p=p, observed=Y)
 
     # Inference
     trace = pm.sample(2000, tune=1000)
@@ -77,7 +89,7 @@ with pm.Model() as model:
     p = pm.invlogit(pm.math.dot(X, beta))
 
     # Likelihood of the data
-    y_obs = pm.Binomial('y_obs',n=X.shape[0],p=p, observed=Y)
+    y_obs = pm.Bernoulli('y_obs',logit_p=p, observed=Y)
 
     # Inference
     trace = pm.sample(2000, tune=1000)
